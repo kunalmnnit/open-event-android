@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
+import org.fossasia.openevent.general.common.SingleLiveEvent
 import org.fossasia.openevent.general.data.Network
 import org.fossasia.openevent.general.data.Preference
 import org.fossasia.openevent.general.event.Event
@@ -20,19 +21,17 @@ class SearchViewModel(
 ) : ViewModel() {
 
     private val compositeDisposable = CompositeDisposable()
-    private val tokenKey = "LOCATION"
 
     private val mutableShowShimmerResults = MutableLiveData<Boolean>()
     val showShimmerResults: LiveData<Boolean> = mutableShowShimmerResults
     private val mutableEvents = MutableLiveData<List<Event>>()
     val events: LiveData<List<Event>> = mutableEvents
-    private val mutableError = MutableLiveData<String>()
+    private val mutableError = SingleLiveEvent<String>()
     val error: LiveData<String> = mutableError
     private val mutableShowNoInternetError = MutableLiveData<Boolean>()
     val showNoInternetError: LiveData<Boolean> = mutableShowNoInternetError
     var searchEvent: String? = null
-    val savedLocation by lazy { preference.getString(tokenKey) }
-    val savedDate by lazy { preference.getString(SearchTimeViewModel.tokenKeyDate) }
+    var savedLocation: String? = null
     private val savedNextDate by lazy { preference.getString(SearchTimeViewModel.tokenKeyNextDate) }
     private val savedNextToNextDate by lazy { preference.getString(SearchTimeViewModel.tokenKeyNextToNextDate) }
     private val savedWeekendDate by lazy { preference.getString(SearchTimeViewModel.tokenKeyWeekendDate) }
@@ -40,9 +39,13 @@ class SearchViewModel(
     private val savedNextMonth by lazy { preference.getString(SearchTimeViewModel.tokenKeyNextMonth) }
     private val savedNextToNextMonth by lazy { preference.getString(SearchTimeViewModel.tokenKeyNextToNextMonth) }
 
+    fun loadSavedLocation() {
+        savedLocation = preference.getString(SAVED_LOCATION)
+    }
+
     fun loadEvents(location: String, time: String) {
         if (!isConnected()) return
-        preference.putString(tokenKey, location)
+        preference.putString(SAVED_LOCATION, location)
         val query: String = when {
             TextUtils.isEmpty(location) -> """[{
                 |   'name':'name',
@@ -72,7 +75,7 @@ class SearchViewModel(
                 |   }, {
                 |       'name':'starts-at',
                 |       'op':'ge',
-                |       'val':'$savedDate%'
+                |       'val':'$time%'
                 |   }, {
                 |       'name':'starts-at',
                 |       'op':'lt',
@@ -148,7 +151,7 @@ class SearchViewModel(
                 |   }, {
                 |       'name':'starts-at',
                 |       'op':'ge',
-                |       'val':'$savedDate%'
+                |       'val':'$time%'
                 |   }, {
                 |       'name':'starts-at',
                 |       'op':'lt',
@@ -171,13 +174,11 @@ class SearchViewModel(
                 mutableError.value = "Error fetching events"
             })
         )
-
-        preference.remove(SearchTimeViewModel.tokenKeyDate)
         preference.remove(SearchTimeViewModel.tokenKeyNextDate)
     }
 
-    fun setFavorite(eventId: Long, favourite: Boolean) {
-        compositeDisposable.add(eventService.setFavorite(eventId, favourite)
+    fun setFavorite(eventId: Long, favorite: Boolean) {
+        compositeDisposable.add(eventService.setFavorite(eventId, favorite)
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe({

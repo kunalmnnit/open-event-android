@@ -4,22 +4,26 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
+import androidx.navigation.NavOptions
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.navigation.Navigation.findNavController
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.fragment_favorite.noLikedText
+import kotlinx.android.synthetic.main.fragment_favorite.favoriteCoordinatorLayout
 import kotlinx.android.synthetic.main.fragment_favorite.view.favoriteEventsRecycler
 import kotlinx.android.synthetic.main.fragment_favorite.view.favoriteProgressBar
+import kotlinx.android.synthetic.main.fragment_favorite.view.findSomethingToDo
 import org.fossasia.openevent.general.R
 import org.fossasia.openevent.general.event.EVENT_ID
 import org.fossasia.openevent.general.event.Event
 import org.fossasia.openevent.general.event.FavoriteFabListener
 import org.fossasia.openevent.general.event.RecyclerViewClickListener
+import org.fossasia.openevent.general.utils.Utils.getAnimFade
 import org.fossasia.openevent.general.utils.extensions.nonNull
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import timber.log.Timber
@@ -28,7 +32,7 @@ const val FAVORITE_EVENT_DATE_FORMAT: String = "favoriteEventDateFormat"
 
 class FavoriteFragment : Fragment() {
     private val favoriteEventsRecyclerAdapter: FavoriteEventsRecyclerAdapter = FavoriteEventsRecyclerAdapter()
-    private val favoriteEventViewModel by viewModel<FavouriteEventsViewModel>()
+    private val favoriteEventViewModel by viewModel<FavoriteEventsViewModel>()
     private lateinit var rootView: View
 
     override fun onCreateView(
@@ -47,6 +51,17 @@ class FavoriteFragment : Fragment() {
             thisActivity.supportActionBar?.setDisplayHomeAsUpEnabled(false)
         }
 
+        rootView.findSomethingToDo.setOnClickListener {
+            val navOptions = NavOptions.Builder()
+                .setPopUpTo(R.id.eventsFragment, false)
+                .setEnterAnim(R.anim.slide_in_right)
+                .setExitAnim(R.anim.slide_out_left)
+                .setPopEnterAnim(R.anim.slide_in_left)
+                .setPopExitAnim(R.anim.slide_out_right)
+                .build()
+            findNavController(rootView).navigate(R.id.searchFragment, null, navOptions)
+        }
+
         val dividerItemDecoration = DividerItemDecoration(rootView.favoriteEventsRecycler.context,
             LinearLayoutManager.VERTICAL)
         rootView.favoriteEventsRecycler.addItemDecoration(dividerItemDecoration)
@@ -55,13 +70,13 @@ class FavoriteFragment : Fragment() {
             override fun onClick(eventID: Long) {
                 val bundle = Bundle()
                 bundle.putLong(EVENT_ID, eventID)
-                findNavController(rootView).navigate(R.id.eventDetailsFragment, bundle)
+                findNavController(rootView).navigate(R.id.eventDetailsFragment, bundle, getAnimFade())
             }
         }
-        val favouriteFabClickListener = object : FavoriteFabListener {
-            override fun onClick(event: Event, isFavourite: Boolean) {
+        val favoriteFabClickListener = object : FavoriteFabListener {
+            override fun onClick(event: Event, isFavorite: Boolean) {
                 val id = favoriteEventsRecyclerAdapter.getPos(event.id)
-                favoriteEventViewModel.setFavorite(event.id, !isFavourite)
+                favoriteEventViewModel.setFavorite(event.id, !isFavorite)
                 event.favorite = !event.favorite
                 favoriteEventsRecyclerAdapter.notifyItemChanged(id)
                 showEmptyMessage(favoriteEventsRecyclerAdapter.itemCount)
@@ -69,7 +84,7 @@ class FavoriteFragment : Fragment() {
         }
 
         favoriteEventsRecyclerAdapter.setListener(recyclerViewClickListener)
-        favoriteEventsRecyclerAdapter.setFavorite(favouriteFabClickListener)
+        favoriteEventsRecyclerAdapter.setFavorite(favoriteFabClickListener)
         favoriteEventViewModel.events
             .nonNull()
             .observe(this, Observer {
@@ -83,7 +98,7 @@ class FavoriteFragment : Fragment() {
         favoriteEventViewModel.error
             .nonNull()
             .observe(this, Observer {
-                Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+                Snackbar.make(favoriteCoordinatorLayout, it, Snackbar.LENGTH_LONG).show()
             })
 
         favoriteEventViewModel.progress

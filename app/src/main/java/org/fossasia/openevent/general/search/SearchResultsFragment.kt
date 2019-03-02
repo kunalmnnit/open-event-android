@@ -1,18 +1,18 @@
 package org.fossasia.openevent.general.search
 
 import android.os.Bundle
-import android.text.TextUtils
 import android.view.LayoutInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.navigation.Navigation.findNavController
+import com.google.android.material.snackbar.Snackbar
+import kotlinx.android.synthetic.main.fragment_search_results.view.searchRootLayout
 import kotlinx.android.synthetic.main.fragment_search_results.view.eventsRecycler
 import kotlinx.android.synthetic.main.fragment_search_results.view.shimmerSearch
 import kotlinx.android.synthetic.main.fragment_search_results.view.errorTextView
@@ -23,8 +23,8 @@ import org.fossasia.openevent.general.event.Event
 import org.fossasia.openevent.general.event.FavoriteFabListener
 import org.fossasia.openevent.general.event.RecyclerViewClickListener
 import org.fossasia.openevent.general.favorite.FavoriteEventsRecyclerAdapter
+import org.fossasia.openevent.general.utils.Utils.getAnimFade
 import org.fossasia.openevent.general.utils.extensions.nonNull
-import org.fossasia.openevent.general.utils.nullToEmpty
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import timber.log.Timber
 
@@ -57,19 +57,19 @@ class SearchResultsFragment : Fragment() {
             override fun onClick(eventID: Long) {
                 val bundle = Bundle()
                 bundle.putLong(EVENT_ID, eventID)
-                findNavController(rootView).navigate(R.id.eventDetailsFragment, bundle)
+                findNavController(rootView).navigate(R.id.eventDetailsFragment, bundle, getAnimFade())
             }
         }
 
-        val favouriteFabClickListener = object : FavoriteFabListener {
-            override fun onClick(event: Event, isFavourite: Boolean) {
+        val favoriteFabClickListener = object : FavoriteFabListener {
+            override fun onClick(event: Event, isFavorite: Boolean) {
                 val id = eventsRecyclerAdapter.getPos(event.id)
-                searchViewModel.setFavorite(event.id, !isFavourite)
+                searchViewModel.setFavorite(event.id, !isFavorite)
                 event.favorite = !event.favorite
                 eventsRecyclerAdapter.notifyItemChanged(id)
             }
         }
-        eventsRecyclerAdapter.setFavorite(favouriteFabClickListener)
+        eventsRecyclerAdapter.setFavorite(favoriteFabClickListener)
         eventsRecyclerAdapter.setListener(recyclerViewClickListener)
         searchViewModel.events
             .nonNull()
@@ -100,7 +100,7 @@ class SearchResultsFragment : Fragment() {
         searchViewModel.error
             .nonNull()
             .observe(this, Observer {
-                Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+                Snackbar.make(rootView.searchRootLayout, it, Snackbar.LENGTH_LONG).show()
             })
 
         rootView.errorTextView.setOnClickListener {
@@ -115,12 +115,7 @@ class SearchResultsFragment : Fragment() {
         val location = bundle?.getString(LOCATION)
         val date = bundle?.getString(DATE)
         searchViewModel.searchEvent = query
-        if (searchViewModel.savedLocation != null && TextUtils.isEmpty(location) && date == "Anytime")
-            searchViewModel.loadEvents(
-                searchViewModel.savedLocation.nullToEmpty(),
-                searchViewModel.savedDate.nullToEmpty())
-        else
-            searchViewModel.loadEvents(location.toString(), date.toString())
+        searchViewModel.loadEvents(location.toString(), date.toString())
     }
 
     private fun showNoSearchResults(events: List<Event>) {

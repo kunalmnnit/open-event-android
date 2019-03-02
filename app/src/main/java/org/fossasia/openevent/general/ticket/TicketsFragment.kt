@@ -6,8 +6,8 @@ import android.view.LayoutInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.os.bundleOf
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -15,6 +15,9 @@ import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.navigation.Navigation.findNavController
+import com.google.android.material.snackbar.Snackbar
+import org.fossasia.openevent.general.auth.SNACKBAR_MESSAGE
+import kotlinx.android.synthetic.main.fragment_tickets.ticketsCoordinatorLayout
 import kotlinx.android.synthetic.main.fragment_tickets.view.eventName
 import kotlinx.android.synthetic.main.fragment_tickets.view.organizerName
 import kotlinx.android.synthetic.main.fragment_tickets.view.progressBarTicket
@@ -26,6 +29,8 @@ import kotlinx.android.synthetic.main.fragment_tickets.view.time
 import org.fossasia.openevent.general.R
 import org.fossasia.openevent.general.event.Event
 import org.fossasia.openevent.general.event.EventUtils
+import org.fossasia.openevent.general.utils.Utils.getAnimFade
+import org.fossasia.openevent.general.utils.Utils.getAnimSlide
 import org.fossasia.openevent.general.utils.extensions.nonNull
 import org.fossasia.openevent.general.utils.nullToEmpty
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -51,6 +56,32 @@ class TicketsFragment : Fragment() {
             currency = bundle.getString(CURRENCY, null)
         }
         ticketsRecyclerAdapter.setCurrency(currency)
+
+        val ticketSelectedListener = object : TicketSelectedListener {
+            override fun onSelected(ticketId: Int, quantity: Int) {
+                handleTicketSelect(ticketId, quantity)
+            }
+        }
+        ticketsRecyclerAdapter.setSelectListener(ticketSelectedListener)
+
+        ticketsViewModel.error
+            .nonNull()
+            .observe(this, Observer {
+                Snackbar.make(ticketsCoordinatorLayout, it, Snackbar.LENGTH_LONG).show()
+            })
+
+        ticketsViewModel.event
+            .nonNull()
+            .observe(this, Observer {
+                loadEventDetails(it)
+            })
+
+        ticketsViewModel.tickets
+            .nonNull()
+            .observe(this, Observer {
+                ticketsRecyclerAdapter.addAll(it)
+                ticketsRecyclerAdapter.notifyDataSetChanged()
+            })
     }
 
     override fun onCreateView(
@@ -64,12 +95,6 @@ class TicketsFragment : Fragment() {
         activity?.supportActionBar?.title = "Ticket Details"
         setHasOptionsMenu(true)
 
-        val ticketSelectedListener = object : TicketSelectedListener {
-            override fun onSelected(ticketId: Int, quantity: Int) {
-                handleTicketSelect(ticketId, quantity)
-            }
-        }
-        ticketsRecyclerAdapter.setSelectListener(ticketSelectedListener)
         rootView.ticketsRecycler.layoutManager = LinearLayoutManager(activity)
 
         rootView.ticketsRecycler.adapter = ticketsRecyclerAdapter
@@ -79,12 +104,6 @@ class TicketsFragment : Fragment() {
         linearLayoutManager.orientation = RecyclerView.VERTICAL
         rootView.ticketsRecycler.layoutManager = linearLayoutManager
 
-        ticketsViewModel.error
-            .nonNull()
-            .observe(this, Observer {
-                Toast.makeText(context, it, Toast.LENGTH_LONG).show()
-            })
-
         ticketsViewModel.progressTickets
             .nonNull()
             .observe(this, Observer {
@@ -93,11 +112,13 @@ class TicketsFragment : Fragment() {
                 rootView.register.isGone = it
             })
 
-        ticketsViewModel.event
-            .nonNull()
-            .observe(this, Observer {
-                loadEventDetails(it)
-            })
+        rootView.register.setOnClickListener {
+            if (!ticketsViewModel.totalTicketsEmpty(ticketIdAndQty)) {
+                checkForAuthentication()
+            } else {
+                handleNoTicketsSelected()
+            }
+        }
 
         ticketsViewModel.ticketTableVisibility
             .nonNull()
@@ -111,21 +132,6 @@ class TicketsFragment : Fragment() {
         ticketsViewModel.loadEvent(id)
         ticketsViewModel.loadTickets(id)
 
-        ticketsViewModel.tickets
-            .nonNull()
-            .observe(this, Observer {
-                ticketsRecyclerAdapter.addAll(it)
-                ticketsRecyclerAdapter.notifyDataSetChanged()
-            })
-
-        rootView.register.setOnClickListener {
-            if (!ticketsViewModel.totalTicketsEmpty(ticketIdAndQty)) {
-                checkForAuthentication()
-            } else {
-                handleNoTicketsSelected()
-            }
-        }
-
         return rootView
     }
 
@@ -133,7 +139,7 @@ class TicketsFragment : Fragment() {
         if (ticketsViewModel.isLoggedIn())
             redirectToAttendee()
         else {
-            Toast.makeText(context, "You need to log in first!", Toast.LENGTH_LONG).show()
+            Snackbar.make(ticketsCoordinatorLayout, getString(R.string.log_in_first), Snackbar.LENGTH_LONG).show()
             redirectToLogin()
         }
     }
@@ -142,11 +148,13 @@ class TicketsFragment : Fragment() {
         val bundle = Bundle()
         bundle.putLong(EVENT_ID, id)
         bundle.putSerializable(TICKET_ID_AND_QTY, ticketIdAndQty)
-        findNavController(rootView).navigate(R.id.attendeeFragment, bundle)
+        findNavController(rootView).navigate(R.id.attendeeFragment, bundle, getAnimSlide())
     }
 
     private fun redirectToLogin() {
-        findNavController(rootView).navigate(R.id.loginFragment)
+        val args = getString(R.string.log_in_first)
+        val bundle = bundleOf(SNACKBAR_MESSAGE to args)
+        findNavController(rootView).navigate(R.id.loginFragment, bundle, getAnimFade())
     }
 
     private fun handleTicketSelect(id: Int, quantity: Int) {

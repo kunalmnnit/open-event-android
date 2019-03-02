@@ -12,13 +12,13 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.isGone
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.navigation.Navigation.findNavController
+import com.google.android.material.snackbar.Snackbar
 import com.squareup.picasso.Picasso
 import kotlinx.android.synthetic.main.content_event.aboutEventContainer
 import kotlinx.android.synthetic.main.content_event.locationContainer
@@ -40,6 +40,8 @@ import kotlinx.android.synthetic.main.content_event.view.nestedContentEventScrol
 import kotlinx.android.synthetic.main.content_event.view.organizerName
 import kotlinx.android.synthetic.main.content_event.view.refundPolicy
 import kotlinx.android.synthetic.main.content_event.view.seeMore
+import kotlinx.android.synthetic.main.content_event.view.seeMoreOrganizer
+import kotlinx.android.synthetic.main.fragment_event.view.eventCoordinatorLayout
 import kotlinx.android.synthetic.main.fragment_event.view.buttonTickets
 import org.fossasia.openevent.general.CircleTransform
 import org.fossasia.openevent.general.R
@@ -48,9 +50,11 @@ import org.fossasia.openevent.general.event.topic.SimilarEventsFragment
 import org.fossasia.openevent.general.social.SocialLinksFragment
 import org.fossasia.openevent.general.ticket.CURRENCY
 import org.fossasia.openevent.general.ticket.TicketsFragment
+import org.fossasia.openevent.general.utils.Utils.getAnimSlide
 import org.fossasia.openevent.general.utils.Utils.requireDrawable
 import org.fossasia.openevent.general.utils.extensions.nonNull
 import org.fossasia.openevent.general.utils.nullToEmpty
+import org.fossasia.openevent.general.utils.stripHtml
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import timber.log.Timber
 import java.util.Currency
@@ -66,8 +70,10 @@ class EventDetailsFragment : Fragment() {
     private lateinit var eventShare: Event
     private var currency: String? = null
     private val LINE_COUNT: Int = 3
+    private val LINE_COUNT_ORGANIZER: Int = 2
     private var menuActionBar: Menu? = null
     private var title: String = ""
+    private var runOnce: Boolean = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -75,6 +81,26 @@ class EventDetailsFragment : Fragment() {
         if (bundle != null) {
             eventId = bundle.getLong(EVENT_ID, -1)
         }
+
+        eventViewModel.event
+            .nonNull()
+            .observe(this, Observer {
+                loadEvent(it)
+                eventShare = it
+                title = eventShare.name
+
+                if (eventShare.favorite) {
+                    setFavoriteIcon(R.drawable.ic_baseline_favorite_white)
+                }
+
+                if (runOnce) {
+                    loadSocialLinksFragment()
+                    loadSimilarEventsFragment()
+                }
+                runOnce = false
+
+                Timber.d("Fetched events of id %d", eventId)
+            })
     }
 
     override fun onCreateView(
@@ -90,29 +116,14 @@ class EventDetailsFragment : Fragment() {
         }
         setHasOptionsMenu(true)
 
-        eventViewModel.event
-            .nonNull()
-            .observe(this, Observer {
-                loadEvent(it)
-                eventShare = it
-                title = eventShare.name
-
-                rootView.buttonTickets.setOnClickListener {
-                    loadTicketFragment()
-                }
-
-                if (eventShare.favorite) {
-                    setFavoriteIcon(R.drawable.ic_baseline_favorite_white_24px)
-                }
-                loadSocialLinksFragment()
-                loadSimilarEventsFragment()
-                Timber.d("Fetched events of id %d", eventId)
-            })
+        rootView.buttonTickets.setOnClickListener {
+            loadTicketFragment()
+        }
 
         eventViewModel.error
             .nonNull()
             .observe(this, Observer {
-                Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+                Snackbar.make(rootView.eventCoordinatorLayout, it, Snackbar.LENGTH_LONG).show()
             })
 
         eventViewModel.loadEvent(eventId)
@@ -144,16 +155,36 @@ class EventDetailsFragment : Fragment() {
         // Organizer Section
         if (!event.organizerName.isNullOrEmpty()) {
             rootView.eventOrganiserName.text = "by " + event.organizerName.nullToEmpty()
-            setTextField(rootView.eventOrganiserDescription, event.organizerDescription)
+            setTextField(rootView.eventOrganiserDescription, event.organizerDescription?.stripHtml()?.trim())
             rootView.organizerName.text = event.organizerName.nullToEmpty()
             rootView.eventOrganiserName.visibility = View.VISIBLE
             organizerContainer.visibility = View.VISIBLE
 
             Picasso.get()
                     .load(event.logoUrl)
-                    .placeholder(requireDrawable(requireContext(), R.drawable.ic_person_black_24dp))
+                    .placeholder(requireDrawable(requireContext(), R.drawable.ic_person_black))
                     .transform(CircleTransform())
                     .into(rootView.logoIcon)
+
+            val organizerDescriptionListener = View.OnClickListener {
+                if (rootView.seeMoreOrganizer.text == getString(R.string.see_more)) {
+                    rootView.seeMoreOrganizer.text = getString(R.string.see_less)
+                    rootView.eventOrganiserDescription.minLines = 0
+                    rootView.eventOrganiserDescription.maxLines = Int.MAX_VALUE
+                } else {
+                    rootView.seeMoreOrganizer.text = getString(R.string.see_more)
+                    rootView.eventOrganiserDescription.setLines(3)
+                }
+            }
+
+            rootView.eventOrganiserDescription.post {
+                if (rootView.eventOrganiserDescription.lineCount > LINE_COUNT_ORGANIZER) {
+                    rootView.seeMoreOrganizer.visibility = View.VISIBLE
+                    // Set up toggle organizer description
+                    rootView.seeMoreOrganizer.setOnClickListener(organizerDescriptionListener)
+                    rootView.eventOrganiserDescription.setOnClickListener(organizerDescriptionListener)
+                }
+            }
         }
 
         currency = Currency.getInstance(event.paymentCurrency).symbol
@@ -161,18 +192,20 @@ class EventDetailsFragment : Fragment() {
         val aboutEventOnClickListener = View.OnClickListener {
             val bundle = Bundle()
             bundle.putLong(EVENT_ID, eventId)
-            findNavController(rootView).navigate(R.id.aboutEventFragment, bundle)
+            findNavController(rootView).navigate(R.id.aboutEventFragment, bundle, getAnimSlide())
         }
 
         // Event Description Section
         if (!event.description.isNullOrEmpty()) {
-            setTextField(rootView.eventDescription, event.description)
+            setTextField(rootView.eventDescription, event.description?.stripHtml())
 
-            if (rootView.eventDescription.lineCount > LINE_COUNT) {
-                rootView.seeMore.visibility = View.VISIBLE
-                // start about fragment
-                rootView.eventDescription.setOnClickListener(aboutEventOnClickListener)
-                rootView.seeMore.setOnClickListener(aboutEventOnClickListener)
+            rootView.eventDescription.post {
+                if (rootView.eventDescription.lineCount > LINE_COUNT) {
+                    rootView.seeMore.visibility = View.VISIBLE
+                    // start about fragment
+                    rootView.eventDescription.setOnClickListener(aboutEventOnClickListener)
+                    rootView.seeMore.setOnClickListener(aboutEventOnClickListener)
+                }
             }
         } else {
             aboutEventContainer.visibility = View.GONE
@@ -199,7 +232,7 @@ class EventDetailsFragment : Fragment() {
 
             Picasso.get()
                     .load(eventViewModel.loadMap(event))
-                    .placeholder(R.drawable.ic_map_black_24dp)
+                    .placeholder(R.drawable.ic_map_black)
                     .into(rootView.imageMap)
         }
 
@@ -248,9 +281,9 @@ class EventDetailsFragment : Fragment() {
             R.id.favorite_event -> {
                 eventViewModel.setFavorite(eventId, !(eventShare.favorite))
                 if (eventShare.favorite) {
-                    setFavoriteIcon(R.drawable.ic_baseline_favorite_border_white_24px)
+                    setFavoriteIcon(R.drawable.ic_baseline_favorite_border_white)
                 } else {
-                    setFavoriteIcon(R.drawable.ic_baseline_favorite_white_24px)
+                    setFavoriteIcon(R.drawable.ic_baseline_favorite_white)
                 }
                 return true
             }
@@ -278,7 +311,7 @@ class EventDetailsFragment : Fragment() {
         val intent = Intent(Intent.ACTION_INSERT)
         intent.type = "vnd.android.cursor.item/event"
         intent.putExtra(CalendarContract.Events.TITLE, event.name)
-        intent.putExtra(CalendarContract.Events.DESCRIPTION, event.description)
+        intent.putExtra(CalendarContract.Events.DESCRIPTION, event.description?.stripHtml())
         intent.putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, EventUtils.getTimeInMilliSeconds(event.startsAt))
         intent.putExtra(CalendarContract.EXTRA_EVENT_END_TIME, EventUtils.getTimeInMilliSeconds(event.endsAt))
         startActivity(intent)
@@ -307,7 +340,7 @@ class EventDetailsFragment : Fragment() {
         bundle.putLong("EVENT_ID", eventId)
         bundle.putString(CURRENCY, currency)
         ticketFragment.arguments = bundle
-        findNavController(rootView).navigate(R.id.ticketsFragment, bundle)
+        findNavController(rootView).navigate(R.id.ticketsFragment, bundle, getAnimSlide())
     }
 
     private fun loadSocialLinksFragment() {
@@ -327,7 +360,8 @@ class EventDetailsFragment : Fragment() {
         bundle.putLong(EVENT_ID, eventId)
         eventTopicId?.let { bundle.putLong(EVENT_TOPIC_ID, it) }
         similarEventsFragment.arguments = bundle
-        childFragmentManager.beginTransaction().add(R.id.frameContainerSimilarEvents, similarEventsFragment).commit()
+        childFragmentManager.beginTransaction()
+            .replace(R.id.frameContainerSimilarEvents, similarEventsFragment).commit()
     }
 
     private fun startMap(event: Event) {

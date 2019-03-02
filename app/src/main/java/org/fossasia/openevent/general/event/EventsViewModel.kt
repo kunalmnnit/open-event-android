@@ -6,33 +6,40 @@ import androidx.lifecycle.ViewModel
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
+import org.fossasia.openevent.general.common.SingleLiveEvent
 import org.fossasia.openevent.general.data.Preference
+import org.fossasia.openevent.general.search.SAVED_LOCATION
 import timber.log.Timber
 
 class EventsViewModel(private val eventService: EventService, private val preference: Preference) :
     ViewModel() {
 
     private val compositeDisposable = CompositeDisposable()
-    private val tokenKey = "LOCATION"
 
     private val mutableProgress = MutableLiveData<Boolean>()
     val progress: LiveData<Boolean> = mutableProgress
     private val mutableEvents = MutableLiveData<List<Event>>()
     val events: LiveData<List<Event>> = mutableEvents
-    private val mutableError = MutableLiveData<String>()
+    private val mutableError = SingleLiveEvent<String>()
     val error: LiveData<String> = mutableError
     private val mutableShowShimmerEvents = MutableLiveData<Boolean>()
     val showShimmerEvents: LiveData<Boolean> = mutableShowShimmerEvents
 
-    val savedLocation by lazy { preference.getString(tokenKey) }
+    var savedLocation: String? = null
+
+    fun loadLocation() {
+        savedLocation = preference.getString(SAVED_LOCATION)
+    }
 
     fun loadLocationEvents() {
-        preference.putString(tokenKey, savedLocation)
         val query = "[{\"name\":\"location-name\",\"op\":\"ilike\",\"val\":\"%$savedLocation%\"}]"
 
         compositeDisposable.add(eventService.getEventsByLocation(query)
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
+            .doOnSubscribe {
+                mutableShowShimmerEvents.value = true
+            }
             .doFinally {
                 mutableProgress.value = false
                 mutableShowShimmerEvents.value = false
@@ -43,11 +50,6 @@ class EventsViewModel(private val eventService: EventService, private val prefer
                 mutableError.value = "Error fetching events"
             })
         )
-    }
-
-    fun retryLoadLocationEvents() {
-        mutableShowShimmerEvents.value = true
-        loadLocationEvents()
     }
 
     fun loadEvents() {
@@ -67,8 +69,8 @@ class EventsViewModel(private val eventService: EventService, private val prefer
         )
     }
 
-    fun setFavorite(eventId: Long, favourite: Boolean) {
-        compositeDisposable.add(eventService.setFavorite(eventId, favourite)
+    fun setFavorite(eventId: Long, favorite: Boolean) {
+        compositeDisposable.add(eventService.setFavorite(eventId, favorite)
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe({

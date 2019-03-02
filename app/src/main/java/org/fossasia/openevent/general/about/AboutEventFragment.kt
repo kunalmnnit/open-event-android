@@ -23,6 +23,7 @@ import org.fossasia.openevent.general.event.EVENT_ID
 import org.fossasia.openevent.general.event.Event
 import org.fossasia.openevent.general.event.EventUtils
 import org.fossasia.openevent.general.utils.extensions.nonNull
+import org.fossasia.openevent.general.utils.stripHtml
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class AboutEventFragment : Fragment(), AppBarLayout.OnOffsetChangedListener {
@@ -38,14 +39,22 @@ class AboutEventFragment : Fragment(), AppBarLayout.OnOffsetChangedListener {
         val bundle = this.arguments
         if (bundle != null)
             id = bundle.getLong(EVENT_ID)
+
+        aboutEventViewModel.event
+            .nonNull()
+            .observe(this, Observer {
+                loadEvent(it)
+            })
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         rootView = layoutInflater.inflate(R.layout.fragment_about_event, container, false)
 
         val thisActivity = activity
-        if (thisActivity is AppCompatActivity)
+        if (thisActivity is AppCompatActivity) {
             thisActivity.supportActionBar?.title = ""
+            thisActivity.supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        }
         setHasOptionsMenu(true)
 
         rootView.appBar.addOnOffsetChangedListener(this)
@@ -64,19 +73,13 @@ class AboutEventFragment : Fragment(), AppBarLayout.OnOffsetChangedListener {
 
         aboutEventViewModel.loadEvent(id)
 
-        aboutEventViewModel.event
-            .nonNull()
-            .observe(this, Observer {
-                loadEvent(it)
-            })
-
         return rootView
     }
 
     private fun loadEvent(event: Event) {
         eventExtra = event
         title = eventExtra.name
-        rootView.aboutEventContent.text = event.description
+        rootView.aboutEventContent.text = event.description?.stripHtml()
         val startsAt = EventUtils.getLocalizedDateTime(event.startsAt)
         val endsAt = EventUtils.getLocalizedDateTime(event.endsAt)
         rootView.aboutEventDetails.text = EventUtils.getFormattedDateTimeRangeBulleted(startsAt, endsAt)

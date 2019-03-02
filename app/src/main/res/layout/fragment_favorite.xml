@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent"
-    android:layout_height="match_parent">
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:id="@+id/favoriteCoordinatorLayout">
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -27,12 +29,14 @@
                    android:layout_gravity="center_horizontal"
                    android:textAlignment="center"/>
                <TextView
-                   android:layout_width="match_parent"
+                   android:id="@+id/findSomethingToDo"
+                   android:layout_width="wrap_content"
                    android:layout_height="wrap_content"
+                   android:layout_gravity="center_horizontal"
+                   android:layout_marginTop="@dimen/layout_margin_large"
                    android:text="@string/find_something_to_do"
-                   android:textSize="25sp"
-                   android:textAlignment="center"/>
-
+                   android:textColor="@color/colorPrimary"
+                   android:textSize="@dimen/text_size_large" />
            </LinearLayout>
 
         <ProgressBar
@@ -51,4 +55,4 @@
        </LinearLayout>
     </FrameLayout>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

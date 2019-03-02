@@ -4,14 +4,15 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.fragment_social_links.eventHostDetails
 import kotlinx.android.synthetic.main.fragment_social_links.socialLinksRecycler
+import kotlinx.android.synthetic.main.fragment_social_links.socialLinksCoordinatorLayout
 import kotlinx.android.synthetic.main.fragment_social_links.view.progressBarSocial
 import kotlinx.android.synthetic.main.fragment_social_links.view.socialLinksRecycler
 import org.fossasia.openevent.general.R
@@ -33,6 +34,21 @@ class SocialLinksFragment : Fragment() {
         if (bundle != null) {
             id = bundle.getLong(EVENT_ID, -1)
         }
+
+        socialLinksViewModel.socialLinks
+            .nonNull()
+            .observe(this, Observer {
+                socialLinksRecyclerAdapter.addAll(it)
+                handleVisibility(it)
+                socialLinksRecyclerAdapter.notifyDataSetChanged()
+                Timber.d("Fetched social-links of size %s", socialLinksRecyclerAdapter.itemCount)
+            })
+
+        socialLinksViewModel.error
+            .nonNull()
+            .observe(this, Observer {
+                Snackbar.make(socialLinksCoordinatorLayout, it, Snackbar.LENGTH_LONG).show()
+            })
     }
 
     override fun onCreateView(
@@ -50,21 +66,6 @@ class SocialLinksFragment : Fragment() {
 
         rootView.socialLinksRecycler.adapter = socialLinksRecyclerAdapter
         rootView.socialLinksRecycler.isNestedScrollingEnabled = false
-
-        socialLinksViewModel.socialLinks
-            .nonNull()
-            .observe(this, Observer {
-                socialLinksRecyclerAdapter.addAll(it)
-                handleVisibility(it)
-                socialLinksRecyclerAdapter.notifyDataSetChanged()
-                Timber.d("Fetched social-links of size %s", socialLinksRecyclerAdapter.itemCount)
-            })
-
-        socialLinksViewModel.error
-            .nonNull()
-            .observe(this, Observer {
-                Toast.makeText(context, it, Toast.LENGTH_LONG).show()
-            })
 
         socialLinksViewModel.progress
             .nonNull()

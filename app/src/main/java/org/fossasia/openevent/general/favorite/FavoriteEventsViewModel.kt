@@ -6,17 +6,18 @@ import androidx.lifecycle.ViewModel
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
+import org.fossasia.openevent.general.common.SingleLiveEvent
 import org.fossasia.openevent.general.event.Event
 import org.fossasia.openevent.general.event.EventService
 import timber.log.Timber
 
-class FavouriteEventsViewModel(private val eventService: EventService) : ViewModel() {
+class FavoriteEventsViewModel(private val eventService: EventService) : ViewModel() {
 
     private val compositeDisposable = CompositeDisposable()
 
     private val mutableProgress = MutableLiveData<Boolean>()
     val progress: LiveData<Boolean> = mutableProgress
-    private val mutableError = MutableLiveData<String>()
+    private val mutableError = SingleLiveEvent<String>()
     val error: LiveData<String> = mutableError
     private val mutableEvents = MutableLiveData<List<Event>>()
     val events: LiveData<List<Event>> = mutableEvents
@@ -36,9 +37,9 @@ class FavouriteEventsViewModel(private val eventService: EventService) : ViewMod
         )
     }
 
-    fun setFavorite(eventId: Long, favourite: Boolean) {
+    fun setFavorite(eventId: Long, favorite: Boolean) {
         compositeDisposable.add(
-            eventService.setFavorite(eventId, favourite)
+            eventService.setFavorite(eventId, favorite)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe({

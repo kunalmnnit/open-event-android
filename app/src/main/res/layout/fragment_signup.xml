@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/signupCoordinatorLayout"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    android:background="@color/grey"
+    android:id="@+id/signupNestedScrollView"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
     android:fitsSystemWindows="true">
 
     <androidx.coordinatorlayout.widget.CoordinatorLayout
@@ -28,7 +27,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center|bottom"
-                    android:layout_marginBottom="@dimen/details_margin_small"
+                    android:layout_marginBottom="@dimen/layout_margin_large"
                     android:text="@string/eventyay_logo"
                     android:textColor="@color/black"
                     android:textSize="@dimen/text_size_very_large" />
@@ -45,9 +44,9 @@
                     android:id="@+id/usernameSignUp"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:drawableLeft="@drawable/ic_email_black_24dp"
+                    android:drawableLeft="@drawable/ic_email_black"
                     android:drawablePadding="@dimen/layout_margin_moderate"
-                    android:drawableStart="@drawable/ic_email_black_24dp"
+                    android:drawableStart="@drawable/ic_email_black"
                     android:hint="@string/email"
                     android:inputType="textEmailAddress" />
             </com.google.android.material.textfield.TextInputLayout>
@@ -65,14 +64,15 @@
                     android:id="@+id/passwordSignUp"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:drawableLeft="@drawable/ic_lock_black_24dp"
+                    android:drawableLeft="@drawable/ic_lock_black"
                     android:drawablePadding="@dimen/layout_margin_moderate"
-                    android:drawableStart="@drawable/ic_lock_black_24dp"
+                    android:drawableStart="@drawable/ic_lock_black"
                     android:hint="@string/password"
                     android:inputType="textPassword" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/textInputLayoutConfirmPassword"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="@dimen/padding_medium"
@@ -83,9 +83,9 @@
                     android:id="@+id/confirmPasswords"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:drawableLeft="@drawable/ic_lock_black_24dp"
+                    android:drawableLeft="@drawable/ic_lock_black"
                     android:drawablePadding="@dimen/layout_margin_moderate"
-                    android:drawableStart="@drawable/ic_lock_black_24dp"
+                    android:drawableStart="@drawable/ic_lock_black"
                     android:hint="@string/confirm_password"
                     android:inputType="textPassword" />
             </com.google.android.material.textfield.TextInputLayout>
@@ -119,23 +119,15 @@
                     android:imeOptions="actionDone"/>
             </com.google.android.material.textfield.TextInputLayout>
 
-            <androidx.appcompat.widget.AppCompatButton
+            <Button
+                android:theme="@style/AccentButton"
+                style="@style/Widget.AppCompat.Button.Colored"
                 android:id="@+id/signUpButton"
-                android:layout_width="fill_parent"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="@dimen/padding_large"
                 android:layout_marginTop="@dimen/padding_large"
-                android:backgroundTint="@color/colorPrimary"
-                android:padding="@dimen/padding_medium"
-                android:text="@string/sign_up"
-                android:textColor="@android:color/white" />
-
-            <ProgressBar
-                android:id="@+id/progressBarSignUp"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:visibility="gone" />
+                android:text="@string/sign_up" />
 
         </LinearLayout>
     </androidx.coordinatorlayout.widget.CoordinatorLayout>

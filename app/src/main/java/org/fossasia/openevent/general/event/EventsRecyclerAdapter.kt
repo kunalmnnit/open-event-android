@@ -34,6 +34,10 @@ class EventsRecyclerAdapter : RecyclerView.Adapter<EventViewHolder>() {
         this.events.addAll(eventList)
     }
 
+    fun removeAll() {
+        events.clear()
+    }
+
     fun getPos(id: Long): Int {
         return events.map { it.id }.indexOf(id)
     }
@@ -66,5 +70,5 @@ interface RecyclerViewClickListener {
 }
 
 interface FavoriteFabListener {
-    fun onClick(event: Event, isFavourite: Boolean)
+    fun onClick(event: Event, isFavorite: Boolean)
 }

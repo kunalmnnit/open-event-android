@@ -1,6 +1,5 @@
 package org.fossasia.openevent.general.settings
 
-import android.app.AlertDialog
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
@@ -10,7 +9,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.Preference
 import com.takisoft.fix.support.v7.preference.PreferenceFragmentCompat
 import org.fossasia.openevent.general.BuildConfig
-import org.fossasia.openevent.general.MainActivity
 import org.fossasia.openevent.general.R
 import org.fossasia.openevent.general.utils.Utils
 import org.fossasia.openevent.general.utils.nullToEmpty
@@ -23,6 +21,9 @@ class SettingsFragment : PreferenceFragmentCompat(), PreferenceChangeListener {
     private val EMAIL: String = "EMAIL"
     private val FORM_LINK: String = "https://docs.google.com/forms/d/e/" +
         "1FAIpQLSd7Y1T1xoXeYaAG_b6Tu1YYK-jZssoC5ltmQbkUX0kmDZaKYw/viewform"
+    private val PRIVACY_LINK: String = "https://eventyay.com/privacy-policy/"
+    private val TERMS_OF_SERVICE_LINK: String = "https://eventyay.com/terms/"
+    private val COOKIE_POLICY_LINK: String = "https://eventyay.com/cookie-policy/"
     private val settingsViewModel by viewModel<SettingsViewModel>()
 
     override fun preferenceChange(evt: PreferenceChangeEvent?) {
@@ -61,11 +62,19 @@ class SettingsFragment : PreferenceFragmentCompat(), PreferenceChangeListener {
             }
             return true
         }
-        if (preference?.key == resources.getString(R.string.key_profile)) {
-            // Logout Dialog shown
-            showDialog()
+        if (preference?.key == getString(R.string.key_privacy)) {
+            context?.let { Utils.openUrl(it, PRIVACY_LINK) }
             return true
         }
+        if (preference?.key == getString(R.string.key_terms_of_service)) {
+            context?.let { Utils.openUrl(it, TERMS_OF_SERVICE_LINK) }
+            return true
+        }
+        if (preference?.key == getString(R.string.key_cookie_policy)) {
+            context?.let { Utils.openUrl(it, COOKIE_POLICY_LINK) }
+            return true
+        }
+
         return false
     }
 
@@ -92,20 +101,5 @@ class SettingsFragment : PreferenceFragmentCompat(), PreferenceChangeListener {
         activity?.supportActionBar?.setDisplayHomeAsUpEnabled(false)
         setHasOptionsMenu(false)
         super.onDestroyView()
-    }
-
-    private fun showDialog() {
-        val builder = AlertDialog.Builder(activity)
-        builder.setMessage(resources.getString(R.string.message))
-                .setPositiveButton(resources.getString(R.string.logout)) { _, _ ->
-                    if (settingsViewModel.isLoggedIn()) {
-                        settingsViewModel.logout()
-                        startActivity(Intent(context, MainActivity::class.java))
-                        activity?.finish()
-                    }
-                }
-                .setNegativeButton(resources.getString(R.string.cancel)) { dialog, _ -> dialog.cancel() }
-        val alert = builder.create()
-        alert.show()
     }
 }

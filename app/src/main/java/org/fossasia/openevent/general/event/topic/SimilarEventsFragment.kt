@@ -4,18 +4,19 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.navigation.Navigation.findNavController
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.fragment_similar_events.moreLikeThis
 import kotlinx.android.synthetic.main.fragment_similar_events.progressBar
 import kotlinx.android.synthetic.main.fragment_similar_events.similarEventsDivider
 import kotlinx.android.synthetic.main.fragment_similar_events.similarEventsRecycler
 import kotlinx.android.synthetic.main.fragment_similar_events.view.similarEventsRecycler
+import kotlinx.android.synthetic.main.fragment_similar_events.view.similarEventsCoordinatorLayout
 import org.fossasia.openevent.general.R
 import org.fossasia.openevent.general.event.EVENT_ID
 import org.fossasia.openevent.general.event.EVENT_TOPIC_ID
@@ -24,6 +25,7 @@ import org.fossasia.openevent.general.event.EventsRecyclerAdapter
 import org.fossasia.openevent.general.event.FavoriteFabListener
 import org.fossasia.openevent.general.event.RecyclerViewClickListener
 import org.fossasia.openevent.general.event.SIMILAR_EVENTS
+import org.fossasia.openevent.general.utils.Utils.getAnimSlide
 import org.fossasia.openevent.general.utils.extensions.nonNull
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import timber.log.Timber
@@ -65,14 +67,14 @@ class SimilarEventsFragment : Fragment() {
             override fun onClick(eventID: Long) {
                 val bundle = Bundle()
                 bundle.putLong(EVENT_ID, eventID)
-                findNavController(rootView).navigate(R.id.eventDetailsFragment, bundle)
+                findNavController(rootView).navigate(R.id.eventDetailsFragment, bundle, getAnimSlide())
             }
         }
 
-        val favouriteFabClickListener = object : FavoriteFabListener {
-            override fun onClick(event: Event, isFavourite: Boolean) {
+        val favoriteFabClickListener = object : FavoriteFabListener {
+            override fun onClick(event: Event, isFavorite: Boolean) {
                 val id = similarEventsRecyclerAdapter.getPos(event.id)
-                similarEventsViewModel.setFavorite(event.id, !isFavourite)
+                similarEventsViewModel.setFavorite(event.id, !isFavorite)
                 event.favorite = !event.favorite
                 similarEventsRecyclerAdapter.notifyItemChanged(id)
             }
@@ -91,7 +93,7 @@ class SimilarEventsFragment : Fragment() {
         similarEventsViewModel.error
             .nonNull()
             .observe(this, Observer {
-                Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+                Snackbar.make(rootView.similarEventsCoordinatorLayout, it, Snackbar.LENGTH_LONG).show()
             })
 
         similarEventsViewModel.progress
@@ -100,7 +102,7 @@ class SimilarEventsFragment : Fragment() {
                 progressBar.isVisible = it
             })
 
-        similarEventsRecyclerAdapter.setFavorite(favouriteFabClickListener)
+        similarEventsRecyclerAdapter.setFavorite(favoriteFabClickListener)
         similarEventsViewModel.loadSimilarEvents(eventTopicId)
 
         return rootView

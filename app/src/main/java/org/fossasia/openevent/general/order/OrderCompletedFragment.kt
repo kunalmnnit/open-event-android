@@ -9,27 +9,26 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Observer
+import androidx.navigation.NavOptions
+import androidx.navigation.Navigation
 import androidx.navigation.Navigation.findNavController
+import com.google.android.material.snackbar.Snackbar
+import kotlinx.android.synthetic.main.fragment_order.view.orderCoordinatorLayout
 import kotlinx.android.synthetic.main.fragment_order.view.add
 import kotlinx.android.synthetic.main.fragment_order.view.name
 import kotlinx.android.synthetic.main.fragment_order.view.share
 import kotlinx.android.synthetic.main.fragment_order.view.time
 import kotlinx.android.synthetic.main.fragment_order.view.view
-import org.fossasia.openevent.general.MainActivity
 import org.fossasia.openevent.general.R
 import org.fossasia.openevent.general.event.Event
 import org.fossasia.openevent.general.event.EventUtils
 import org.fossasia.openevent.general.ticket.EVENT_ID
 import org.fossasia.openevent.general.utils.extensions.nonNull
+import org.fossasia.openevent.general.utils.stripHtml
 import org.koin.androidx.viewmodel.ext.android.viewModel
-
-const val TICKETS: String = "OpenMyTickets"
 
 class OrderCompletedFragment : Fragment() {
 
@@ -68,7 +67,7 @@ class OrderCompletedFragment : Fragment() {
         orderCompletedViewModel.message
             .nonNull()
             .observe(this, Observer {
-                Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+                Snackbar.make(rootView.orderCoordinatorLayout, it, Snackbar.LENGTH_LONG).show()
             })
 
         rootView.add.setOnClickListener {
@@ -82,8 +81,6 @@ class OrderCompletedFragment : Fragment() {
         rootView.share.setOnClickListener {
             shareEvent(eventShare)
         }
-
-        rootView.share.scaleType = ImageView.ScaleType.CENTER
 
         return rootView
     }
@@ -104,7 +101,7 @@ class OrderCompletedFragment : Fragment() {
         val intent = Intent(Intent.ACTION_INSERT)
         intent.type = "vnd.android.cursor.item/event"
         intent.putExtra(CalendarContract.Events.TITLE, event.name)
-        intent.putExtra(CalendarContract.Events.DESCRIPTION, event.description)
+        intent.putExtra(CalendarContract.Events.DESCRIPTION, event.description?.stripHtml())
         intent.putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, EventUtils.getTimeInMilliSeconds(event.startsAt))
         intent.putExtra(CalendarContract.EXTRA_EVENT_END_TIME, EventUtils.getTimeInMilliSeconds(event.endsAt))
         startActivity(intent)
@@ -118,12 +115,8 @@ class OrderCompletedFragment : Fragment() {
         startActivity(Intent.createChooser(sendIntent, "Share Event Details"))
     }
 
-    private fun redirectToMain() {
-        activity?.supportFragmentManager?.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
-        val intent = Intent(activity, MainActivity::class.java)
-        startActivity(intent)
-        activity?.overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right)
-        activity?.finish()
+    private fun redirectToEventsFragment() {
+        findNavController(rootView).popBackStack(R.id.eventsFragment, false)
     }
 
     private fun openEventDetails() {
@@ -131,14 +124,8 @@ class OrderCompletedFragment : Fragment() {
     }
 
     private fun openTicketDetails() {
-        val searchBundle = Bundle()
-        searchBundle.putBoolean(TICKETS, true)
-        activity?.supportFragmentManager?.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
-        val intent = Intent(activity, MainActivity::class.java)
-        intent.putExtras(searchBundle)
-        startActivity(intent)
-        activity?.overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right)
-        activity?.finish()
+        val navOptions = NavOptions.Builder().setPopUpTo(R.id.eventsFragment, false).build()
+        Navigation.findNavController(rootView).navigate(R.id.orderUnderUserFragment, null, navOptions)
     }
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
@@ -152,7 +139,7 @@ class OrderCompletedFragment : Fragment() {
                 true
             }
             R.id.tick -> {
-                redirectToMain()
+                redirectToEventsFragment()
                 return true
             }
             else -> super.onOptionsItemSelected(item)
